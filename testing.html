@@ -203,11 +203,11 @@
 
   async function fetchRedditPosts(subreddit) {
     try {
-      const response = await fetch(`https://www.reddit.com/r/${subreddit}/search.json?q=cooked&type=link&t=month&restrict_sr=1`);
+      const response = await fetch(`https://corsproxy.io/?url=https://www.reddit.com/r/${subreddit}/search.json?q=cooked&type=link&t=month&restrict_sr=1`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       return data.data.children.map(post => ({
-        subredditIcon: post.data.sr_detail?.icon_img || 'https://www.redditstatic.com/avatars/avatar_default_02_46A508.png',
+        subredditIcon: post.data.sr_detail?.icon_img || 'https://corsproxy.io/?url=https://www.redditstatic.com/avatars/avatar_default_02_46A508.png',
         subredditName: post.data.subreddit,
         poster: post.data.author,
         postTime: new Date(post.data.created_utc * 1000).toLocaleString(),
