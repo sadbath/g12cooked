@@ -200,24 +200,35 @@
       cardList.appendChild(noPostsState);
     }
   }
-  async function fetchWithProxy(url) {
-    const PROXIES = [
-      (url) => `https://corsproxy.io/?url=${url}`,
-      (url) => `https://proxy.corsfix.com/?${url}`,
-      // Note: thingproxy can be slow, but is a good example of a different URL structure
-      (url) => `https://api.cors.lol/?url=${url}`, 
-    ];
-    let rand_index = Math.floor(Math.random() * PROXIES.length);
-    try {
-      const response = await fetch(PROXIES[rand_index];
-      return response;
-    } catch (e) {
-      throw new Error("proxy error:",e);
+async function fetchWithProxy(url) {
+  const PROXIES = [
+    (url) => `https://corsproxy.io/?url=${url}`,
+    (url) => `https://proxy.corsfix.com/?${url}`,
+    (url) => `https://api.cors.lol/?url=${url}`,
+  ];
+  
+  let rand_index = Math.floor(Math.random() * PROXIES.length);
+  const proxyUrl = PROXIES[rand_index](url); // Call the function to build the URL
+  console.log("Trying proxy:", proxyUrl);
+
+  try {
+    // FIX 1: You need to call the function from the array with the URL
+    // and close the fetch() parentheses properly.
+    const response = await fetch(proxyUrl);
+    return response;
+  } catch (e) {
+    // FIX 2: Improve error message for clarity.
+    throw new Error(`Proxy request failed: ${e.message}`);
   }
-  async function fetchRedditPosts(subreddit) {
+}
+
+async function fetchRedditPosts(subreddit) {
     try {
       const response = await fetchWithProxy(`https://www.reddit.com/r/${subreddit}/search.json?q=cooked&type=link&t=month&restrict_sr=1`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       return data.data.children.map(post => ({
         subredditIcon: post.data.sr_detail?.icon_img || 'https://corsproxy.io/?url=https://www.redditstatic.com/avatars/avatar_default_02_46A508.png',
