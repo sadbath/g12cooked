@@ -200,10 +200,23 @@
       cardList.appendChild(noPostsState);
     }
   }
-
+  async function fetchWithProxy(url) {
+    const PROXIES = [
+      (url) => `https://corsproxy.io/?url=${url}`,
+      (url) => `https://proxy.corsfix.com/?${url}`,
+      // Note: thingproxy can be slow, but is a good example of a different URL structure
+      (url) => `https://api.cors.lol/?url=${url}`, 
+    ];
+    let rand_index = Math.floor(Math.random() * PROXIES.length);
+    try {
+      const response = await fetch(PROXIES[rand_index];
+      return response;
+    } catch (e) {
+      throw new Error("proxy error:",e);
+  }
   async function fetchRedditPosts(subreddit) {
     try {
-      const response = await fetch(`https://corsproxy.io/?url=https://www.reddit.com/r/${subreddit}/search.json?q=cooked&type=link&t=month&restrict_sr=1`);
+      const response = await fetchWithProxy(`https://www.reddit.com/r/${subreddit}/search.json?q=cooked&type=link&t=month&restrict_sr=1`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       return data.data.children.map(post => ({
