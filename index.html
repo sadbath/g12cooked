@@ -200,26 +200,97 @@
       cardList.appendChild(noPostsState);
     }
   }
-async function fetchWithProxy(url) {
-  const PROXIES = [
-    (url) => `https://corsproxy.io/?url=${url}`,
-    (url) => `https://proxy.corsfix.com/?${url}`,
-    (url) => `https://api.cors.lol/?url=${url}`,
-  ];
-  
-  let rand_index = Math.floor(Math.random() * PROXIES.length);
-  const proxyUrl = PROXIES[rand_index](url); // Call the function to build the URL
-  console.log("Trying proxy:", proxyUrl);
+// A unique key for storing our proxy scores in localStorage.
+const PROXY_SCORES_KEY = 'proxyReliabilityScores';
 
-  try {
-    // FIX 1: You need to call the function from the array with the URL
-    // and close the fetch() parentheses properly.
-    const response = await fetch(proxyUrl);
-    return response;
-  } catch (e) {
-    // FIX 2: Improve error message for clarity.
-    throw new Error(`Proxy request failed: ${e.message}`);
+// Define our proxies with a stable ID for tracking.
+const PROXIES = [
+  {
+    id: 'corsproxy.io',
+    getUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  },
+  {
+    id: 'proxy.corsfix.com',
+    getUrl: (url) => `https://proxy.corsfix.com/?${encodeURIComponent(url)}`,
+  },
+  {
+    id: 'api.cors.lol',
+    getUrl: (url) => `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
+  },
+];
+
+
+const scoreManager = {
+  getScores: () => {
+    try {
+      const scores = localStorage.getItem(PROXY_SCORES_KEY);
+      return scores ? JSON.parse(scores) : {};
+    } catch (e) {
+      console.error("Could not read proxy scores from localStorage.", e);
+      return {};
+    }
+  },
+  updateScore: (proxyId, outcome) => {
+    const scores = scoreManager.getScores();
+    const currentScore = scores[proxyId] || 0;
+
+    // A success adds 1, a failure subtracts 2 (to penalize failures more heavily).
+    scores[proxyId] = outcome === 'success' ? currentScore + 1 : currentScore - 2;
+
+    try {
+      localStorage.setItem(PROXY_SCORES_KEY, JSON.stringify(scores));
+    } catch (e) {
+      console.error("Could not save proxy scores to localStorage.", e);
+    }
   }
+};
+
+/**
+
+async function fetchWithProxy(url) {
+  const currentScores = scoreManager.getScores();
+
+  // 1. Prepare and sort the list of proxies to try.
+  const sortedProxies = [...PROXIES]
+    .map(proxy => ({
+      ...proxy,
+      // Assign the stored score, or 0 if it has never been used.
+      score: currentScores[proxy.id] || 0, 
+    }))
+    // Sort descending by score. The highest score (most reliable) comes first.
+    .sort((a, b) => b.score - a.score);
+
+  console.log("Proxy priority list (by score):", sortedProxies.map(p => `${p.id} (${p.score})`).join(', '));
+
+  const errors = [];
+
+  for (const proxy of sortedProxies) {
+    const proxyUrl = proxy.getUrl(url);
+    console.log(`Attempting to fetch via proxy: ${proxy.id} (Score: ${proxy.score})`);
+
+    try {
+      const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      // 2. SUCCESS! Update score and return.
+      console.log(`Success with proxy: ${proxy.id}`);
+      scoreManager.updateScore(proxy.id, 'success');
+      return response;
+
+    } catch (error) {
+      // 3. FAILURE! Update score and try the next one.
+      console.warn(`Proxy failed: ${proxy.id}. Reason: ${error.message}`);
+      scoreManager.updateScore(proxy.id, 'failure');
+      errors.push({ proxy: proxy.id, error: error.message });
+    }
+  }
+
+  // 4. If we get here, all proxies failed.
+  const combinedError = new Error("All CORS proxies failed to fetch the URL.");
+  combinedError.cause = errors;
+  throw combinedError;
 }
 
 async function fetchRedditPosts(subreddit) {
