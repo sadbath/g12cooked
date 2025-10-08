@@ -207,15 +207,15 @@ const PROXY_SCORES_KEY = 'proxyReliabilityScores';
 const PROXIES = [
   {
     id: 'corsproxy.io',
-    getUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    getUrl: (url) => `https://corsproxy.io/?${url}`,
   },
   {
     id: 'proxy.corsfix.com',
-    getUrl: (url) => `https://proxy.corsfix.com/?${encodeURIComponent(url)}`,
+    getUrl: (url) => `https://proxy.corsfix.com/?${url}`,
   },
   {
     id: 'api.cors.lol',
-    getUrl: (url) => `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
+    getUrl: (url) => `https://api.cors.lol/?url=${url}`,
   },
 ];
 
@@ -245,7 +245,6 @@ const scoreManager = {
   }
 };
 
-/**
 
 async function fetchWithProxy(url) {
   const currentScores = scoreManager.getScores();
